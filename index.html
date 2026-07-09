@@ -57,7 +57,7 @@ select,input.txt{width:calc(100% - 24px);margin:6px 12px;padding:10px;background
   <button class="btn" id="startBtn">Start Empty Workout</button>
   <div class="card" style="display:flex;align-items:center">
     <div style="flex:1;overflow:hidden"><div class="t">Morning Weight</div><div class="s" id="bwLast">No entries yet</div></div>
-    <input class="num" id="bwIn" type="number" inputmode="decimal" step="0.1" style="width:60px;margin-right:6px" placeholder="kg">
+    <input class="num" id="bwIn" type="number" inputmode="decimal" step="0.1" style="width:60px;margin-right:6px" placeholder="lb">
     <button class="hbtn" id="bwBtn">Log</button>
   </div>
   <div style="display:flex;align-items:center;justify-content:space-between;margin-right:6px"><h2>Templates</h2><button class="hbtn" id="newTplBtn">+ New</button></div>
@@ -96,8 +96,8 @@ select,input.txt{width:calc(100% - 24px);margin:6px 12px;padding:10px;background
 <script>
 (function(){
 "use strict";
-var LS="liftlog", DEFAULT_EX=["Squat","Bench Press","Deadlift","Overhead Press","Barbell Row","Pull Up","Dip","Lat Pulldown","Bicep Curl","Tricep Extension","Leg Press","Romanian Deadlift","Incline Bench","Lateral Raise","Lunge","Calf Raise","Face Pull","Crunch","Hanging Leg Raise","Russian Twist","Plank"];
-// set = [kg, reps, done, type, rpe]  type: 0 normal, 1 warm-up, 2 top set
+var LS="liftlog", DEFAULT_EX=["Squat","Bench Press","Deadlift","Overhead Press","Barbell Row","Pull Up","Dip","Lat Pulldown","Bicep Curl","Tricep Extension","Leg Press","Romanian Deadlift","Incline Bench","Lateral Raise","Lunge","Calf Raise","Face Pull","Crunch","Hanging Leg Raise","Russian Twist","Plank","Skullcrusher","Rope Pushdown","Single Arm Row","Kroc Row","Bar Tuck","Back Tuck","Hammer Curl","Archer Fly","Bulgarian Split Squat","Hack Squat","Leg Curl","Hip Thrust","Front Lever Practice","Dragon Flag","Weighted Leg Raise","Decline Crunch","Reverse Deadlift"];
+// set = [lb, reps, done, type, rpe]  type: 0 normal, 1 warm-up, 2 top set
 var TYPE_L=["","W","T"], TYPE_C=["","tw","tt"], TYPE_N=["Working set","Warm-up","Top set"];
 var $=function(id){return document.getElementById(id)};
 
@@ -106,21 +106,28 @@ function save(){localStorage.setItem(LS,JSON.stringify(db))}
 var db=load();
 db.workouts=db.workouts||[];      // [{date, dur, ex:[{n, sets:[[w,r,done,type,rpe],...]}]}]
 db.custom=db.custom||[];          // custom exercise names
-db.bw=db.bw||[];                  // bodyweight: [[ts, kg], ...] one per day
+db.bw=db.bw||[];                  // bodyweight: [[ts, lb], ...] one per day
 var active=db.active||null;       // survives reload/app kill
 
-// seed PPL / Abs / UL templates once; t = per-set types
+// seed templates from Routine.md (PPL/Abs/Upper/Lower); t = per-set types
+// tplV bump replaces same-name templates on existing installs, keeps custom ones
 function T(n,t){return{n:n,t:t}}
-if(!db.templates){
-  db.templates=[
-    {name:"Push",ex:[T("Bench Press",[1,1,2,0,0]),T("Overhead Press",[1,0,0,0]),T("Incline Bench",[0,0,0]),T("Lateral Raise",[0,0,0]),T("Tricep Extension",[0,0,0])]},
-    {name:"Pull",ex:[T("Barbell Row",[1,1,2,0,0]),T("Pull Up",[0,0,0]),T("Lat Pulldown",[0,0,0]),T("Face Pull",[0,0,0]),T("Bicep Curl",[0,0,0])]},
-    {name:"Legs",ex:[T("Squat",[1,1,2,0,0]),T("Romanian Deadlift",[1,0,0,0]),T("Leg Press",[0,0,0]),T("Lunge",[0,0]),T("Calf Raise",[0,0,0,0])]},
-    {name:"Abs",ex:[T("Crunch",[0,0,0]),T("Hanging Leg Raise",[0,0,0]),T("Russian Twist",[0,0,0]),T("Plank",[0,0,0])]},
-    {name:"Upper",ex:[T("Bench Press",[1,1,2,0]),T("Barbell Row",[1,0,0,0]),T("Overhead Press",[0,0,0]),T("Lat Pulldown",[0,0,0]),T("Bicep Curl",[0,0]),T("Tricep Extension",[0,0])]},
-    {name:"Lower",ex:[T("Squat",[1,1,2,0]),T("Deadlift",[1,1,2]),T("Leg Press",[0,0,0]),T("Romanian Deadlift",[0,0,0]),T("Calf Raise",[0,0,0])]}
-  ];
-  save();
+var SEED=[
+  {name:"Push",ex:[T("Bench Press",[1,1,2,0,0]),T("Dip",[0,0,0]),T("Incline Bench",[0,0,0]),T("Overhead Press",[0,0,0]),T("Skullcrusher",[0,0]),T("Rope Pushdown",[0,0]),T("Lateral Raise",[0,0,0])]},
+  {name:"Pull",ex:[T("Pull Up",[1,1,2,0,0,0]),T("Single Arm Row",[0,0,0]),T("Kroc Row",[0,0]),T("Bar Tuck",[0,0,0]),T("Bicep Curl",[0,0]),T("Hammer Curl",[0,0]),T("Archer Fly",[0,0])]},
+  {name:"Legs",ex:[T("Squat",[1,1,2,0,0]),T("Romanian Deadlift",[1,0,0,0]),T("Bulgarian Split Squat",[0,0]),T("Hack Squat",[0,0]),T("Leg Curl",[0,0]),T("Calf Raise",[0,0,0])]},
+  {name:"Abs",ex:[T("Front Lever Practice",[0,0,0,0,0]),T("Dragon Flag",[0,0,0]),T("Weighted Leg Raise",[0,0,0]),T("Decline Crunch",[0,0]),T("Reverse Deadlift",[0,0])]},
+  {name:"Upper",ex:[T("Dip",[1,1,2,0,0,0]),T("Pull Up",[1,0,0,0]),T("Bench Press",[1,0,0,0]),T("Single Arm Row",[0,0,0]),T("Overhead Press",[0,0]),T("Archer Fly",[0,0]),T("Back Tuck",[0,0,0])]},
+  {name:"Lower",ex:[T("Hack Squat",[1,1,2,0,0]),T("Romanian Deadlift",[1,0,0,0]),T("Hip Thrust",[1,0,0,0]),T("Bulgarian Split Squat",[0,0]),T("Leg Curl",[0,0]),T("Calf Raise",[0,0,0])]}
+];
+if((db.tplV||0)<2){
+  db.templates=db.templates||[];
+  for(var si=0;si<SEED.length;si++){
+    var sf=-1;
+    for(var sj=0;sj<db.templates.length;sj++)if(db.templates[sj].name===SEED[si].name){sf=sj;break}
+    if(sf<0)db.templates.push(SEED[si]);else db.templates[sf]=SEED[si];
+  }
+  db.tplV=2;save();
 }
 
 // ---------- helpers ----------
@@ -151,7 +158,7 @@ function show(id){
 function renderBW(){
   var n=db.bw.length;
   if(!n){$("bwLast").textContent="No entries yet";return}
-  var last=db.bw[n-1],txt=last[1]+" kg · "+fmtDate(last[0]);
+  var last=db.bw[n-1],txt=last[1]+" lb · "+fmtDate(last[0]);
   if(n>1){
     var d=Math.round((last[1]-db.bw[n-2][1])*10)/10;
     txt+="  ("+(d>0?"+":"")+d+")";
@@ -176,7 +183,7 @@ function renderHome(){
   for(i=db.workouts.length-1;i>=0;i--){
     w=db.workouts[i];
     html+='<div class="card" data-i="'+i+'"><div class="t">'+fmtDate(w.date)+'</div><div class="s">'+
-      w.ex.length+' exercises · '+fmtT(w.dur)+' · '+vol(w)+' kg volume</div></div>';
+      w.ex.length+' exercises · '+fmtT(w.dur)+' · '+vol(w)+' lb volume</div></div>';
   }
   h.innerHTML=html;
 }
@@ -278,7 +285,7 @@ function openDetail(i){
     for(k=0;k<e.sets.length;k++){
       s=e.sets[k];
       var ty=s[3]||0;
-      html+='<div class="s"><span class="'+TYPE_C[ty]+'">'+(ty?TYPE_L[ty]:(k+1))+'</span>  '+(s[0]||0)+' kg × '+(s[1]||0)+(s[4]!=null?' @'+s[4]:'')+'</div>';
+      html+='<div class="s"><span class="'+TYPE_C[ty]+'">'+(ty?TYPE_L[ty]:(k+1))+'</span>  '+(s[0]||0)+' lb × '+(s[1]||0)+(s[4]!=null?' @'+s[4]:'')+'</div>';
     }
     html+='</div>';
   }
@@ -316,7 +323,7 @@ function renderWorkout(){
     e=active.ex[i];p=prev(e.n);
     html+='<div class="card"><div class="exhead"><span class="exname">'+e.n+'</span>'+
       '<button class="hbtn" data-a="delex" data-e="'+i+'" style="color:#f55">✕</button></div>'+
-      '<div class="row hd"><span class="c1">Set</span><span class="c2">Prev</span><span class="c3">kg</span><span class="c4">Reps</span><span class="c6">RPE</span><span class="c5"></span></div>';
+      '<div class="row hd"><span class="c1">Set</span><span class="c2">Prev</span><span class="c3">lb</span><span class="c4">Reps</span><span class="c6">RPE</span><span class="c5"></span></div>';
     var wn=0;
     for(j=0;j<e.sets.length;j++){
       s=e.sets[j];
@@ -421,7 +428,7 @@ function endWorkout(){
 // ---------- export ----------
 $("exportBtn").addEventListener("click",function(){
   if(!db.workouts.length&&!db.bw.length){alert("Nothing to export yet.");return}
-  var lines=["date,exercise,set,type,kg,reps,rpe"],i,j,k,w,e,s;
+  var lines=["date,exercise,set,type,lb,reps,rpe"],i,j,k,w,e,s;
   for(i=0;i<db.bw.length;i++)
     lines.push(fmtYMD(db.bw[i][0])+',"Bodyweight",,bodyweight,'+db.bw[i][1]+',,');
   for(i=0;i<db.workouts.length;i++){
