@@ -1,0 +1,482 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
+<meta name="theme-color" content="#111">
+<title>Lift Log</title>
+<style>
+/* System font only, dark theme (less power on nothing, but less glare), minimal rules */
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html{font:16px -apple-system,system-ui,sans-serif}
+body{background:#111;color:#eee;padding-bottom:70px;min-height:100vh}
+header{position:sticky;top:0;background:#111;padding:12px;padding-top:calc(12px + env(safe-area-inset-top));display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #222;z-index:2}
+h1{font-size:17px;font-weight:600}
+h2{font-size:15px;font-weight:600;margin:14px 12px 6px}
+button{font:inherit;color:inherit;background:none;border:0}
+.btn{display:block;width:calc(100% - 24px);margin:10px 12px;padding:12px;background:#2f6fed;border-radius:8px;font-weight:600;font-size:16px;text-align:center}
+.btn.sec{background:#222}
+.btn.danger{color:#f55;background:none;padding:8px}
+.hbtn{color:#2f6fed;font-weight:600;font-size:15px;padding:4px 6px}
+.card{background:#1a1a1a;border-radius:8px;margin:8px 12px;padding:10px}
+.card .t{font-weight:600;font-size:15px}
+.card .s{color:#888;font-size:13px;margin-top:2px}
+.exname{font-weight:600;color:#2f6fed;font-size:15px;flex:1}
+.exhead{display:flex;align-items:center;margin-bottom:6px}
+.row{display:flex;align-items:center;padding:3px 0}
+.row.hd{color:#777;font-size:11px;text-transform:uppercase}
+.c1{width:30px;text-align:center;color:#888;font-size:13px;font-weight:600}
+.c2{flex:1;text-align:center;color:#666;font-size:12px;overflow:hidden;white-space:nowrap}
+.c3,.c4{width:54px;text-align:center}
+.c5{width:34px;text-align:center}
+.c6{width:40px;text-align:center}
+.tw{color:#f90!important}
+.tt{color:#f55!important}
+input.num{width:50px;padding:6px 2px;background:#222;border:0;border-radius:6px;color:#eee;font:inherit;font-size:15px;text-align:center}
+.c6 input.num{width:38px;font-size:13px}
+input.num:focus{outline:1px solid #2f6fed}
+.done input.num{background:#173;color:#cfc}
+.chk{width:30px;height:30px;line-height:30px;border-radius:6px;background:#222;color:#666;font-size:15px}
+.done .chk{background:#2a2;color:#fff}
+.addset{display:block;width:100%;padding:8px;margin-top:4px;background:#222;border-radius:6px;color:#aaa;font-size:13px}
+.timer{position:fixed;bottom:0;left:0;right:0;background:#1a1a1a;border-top:1px solid #333;padding:10px 12px;padding-bottom:calc(10px + env(safe-area-inset-bottom));display:flex;justify-content:space-between;align-items:center;z-index:2}
+.timer b{font-size:20px;font-variant-numeric:tabular-nums}
+.hidden{display:none}
+.empty{color:#666;text-align:center;padding:30px 12px;font-size:14px}
+select,input.txt{width:calc(100% - 24px);margin:6px 12px;padding:10px;background:#222;border:0;border-radius:8px;color:#eee;font:inherit;-webkit-appearance:none}
+.duration{color:#888;font-size:14px;font-variant-numeric:tabular-nums}
+</style>
+</head>
+<body>
+<header><h1 id="title">Lift Log</h1><button class="hbtn hidden" id="finishBtn">Finish</button></header>
+
+<!-- HOME -->
+<div id="home">
+  <button class="btn" id="startBtn">Start Empty Workout</button>
+  <div class="card" style="display:flex;align-items:center">
+    <div style="flex:1;overflow:hidden"><div class="t">Morning Weight</div><div class="s" id="bwLast">No entries yet</div></div>
+    <input class="num" id="bwIn" type="number" inputmode="decimal" step="0.1" style="width:60px;margin-right:6px" placeholder="kg">
+    <button class="hbtn" id="bwBtn">Log</button>
+  </div>
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-right:6px"><h2>Templates</h2><button class="hbtn" id="newTplBtn">+ New</button></div>
+  <div id="templates"></div>
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-right:6px"><h2>History</h2><button class="hbtn" id="exportBtn">Export</button></div>
+  <div id="history"></div>
+  <textarea id="exportOut" class="txt hidden" rows="8" readonly style="font-size:12px"></textarea>
+</div>
+
+<!-- ACTIVE WORKOUT -->
+<div id="workout" class="hidden">
+  <div style="padding:8px 12px" class="duration" id="dur">0:00</div>
+  <div id="exercises"></div>
+  <select id="exPick"><option value="">+ Add Exercise…</option></select>
+  <input class="txt hidden" id="exCustom" placeholder="Exercise name" autocapitalize="words">
+  <button class="btn danger" id="cancelBtn">Cancel Workout</button>
+  <div class="timer hidden" id="timer"><span>Rest</span><b id="timerVal">0:00</b><button class="hbtn" id="timerStop">Skip</button></div>
+</div>
+
+<!-- TEMPLATE EDITOR -->
+<div id="tedit" class="hidden">
+  <button class="hbtn" id="tBackBtn" style="margin:8px 6px">‹ Done</button>
+  <input class="txt" id="tName" placeholder="Template name" autocapitalize="words">
+  <div id="tBody"></div>
+  <select id="tPick"><option value="">+ Add Exercise…</option></select>
+  <button class="btn danger" id="tDelBtn">Delete Template</button>
+</div>
+
+<!-- DETAIL -->
+<div id="detail" class="hidden">
+  <button class="hbtn" id="backBtn" style="margin:8px 6px">‹ Back</button>
+  <div id="detailBody"></div>
+  <button class="btn danger" id="delBtn">Delete Workout</button>
+</div>
+
+<script>
+(function(){
+"use strict";
+var LS="liftlog", DEFAULT_EX=["Squat","Bench Press","Deadlift","Overhead Press","Barbell Row","Pull Up","Dip","Lat Pulldown","Bicep Curl","Tricep Extension","Leg Press","Romanian Deadlift","Incline Bench","Lateral Raise","Lunge","Calf Raise","Face Pull","Crunch","Hanging Leg Raise","Russian Twist","Plank"];
+// set = [kg, reps, done, type, rpe]  type: 0 normal, 1 warm-up, 2 top set
+var TYPE_L=["","W","T"], TYPE_C=["","tw","tt"], TYPE_N=["Working set","Warm-up","Top set"];
+var $=function(id){return document.getElementById(id)};
+
+function load(){try{return JSON.parse(localStorage.getItem(LS))||{}}catch(e){return{}}}
+function save(){localStorage.setItem(LS,JSON.stringify(db))}
+var db=load();
+db.workouts=db.workouts||[];      // [{date, dur, ex:[{n, sets:[[w,r,done,type,rpe],...]}]}]
+db.custom=db.custom||[];          // custom exercise names
+db.bw=db.bw||[];                  // bodyweight: [[ts, kg], ...] one per day
+var active=db.active||null;       // survives reload/app kill
+
+// seed PPL / Abs / UL templates once; t = per-set types
+function T(n,t){return{n:n,t:t}}
+if(!db.templates){
+  db.templates=[
+    {name:"Push",ex:[T("Bench Press",[1,1,2,0,0]),T("Overhead Press",[1,0,0,0]),T("Incline Bench",[0,0,0]),T("Lateral Raise",[0,0,0]),T("Tricep Extension",[0,0,0])]},
+    {name:"Pull",ex:[T("Barbell Row",[1,1,2,0,0]),T("Pull Up",[0,0,0]),T("Lat Pulldown",[0,0,0]),T("Face Pull",[0,0,0]),T("Bicep Curl",[0,0,0])]},
+    {name:"Legs",ex:[T("Squat",[1,1,2,0,0]),T("Romanian Deadlift",[1,0,0,0]),T("Leg Press",[0,0,0]),T("Lunge",[0,0]),T("Calf Raise",[0,0,0,0])]},
+    {name:"Abs",ex:[T("Crunch",[0,0,0]),T("Hanging Leg Raise",[0,0,0]),T("Russian Twist",[0,0,0]),T("Plank",[0,0,0])]},
+    {name:"Upper",ex:[T("Bench Press",[1,1,2,0]),T("Barbell Row",[1,0,0,0]),T("Overhead Press",[0,0,0]),T("Lat Pulldown",[0,0,0]),T("Bicep Curl",[0,0]),T("Tricep Extension",[0,0])]},
+    {name:"Lower",ex:[T("Squat",[1,1,2,0]),T("Deadlift",[1,1,2]),T("Leg Press",[0,0,0]),T("Romanian Deadlift",[0,0,0]),T("Calf Raise",[0,0,0])]}
+  ];
+  save();
+}
+
+// ---------- helpers ----------
+function fmtT(s){return Math.floor(s/60)+":"+("0"+s%60).slice(-2)}
+function fmtDate(ts){var d=new Date(ts);return d.toLocaleDateString(undefined,{weekday:"short",month:"short",day:"numeric"})}
+function fmtYMD(ts){var d=new Date(ts);return d.getFullYear()+"-"+("0"+(d.getMonth()+1)).slice(-2)+"-"+("0"+d.getDate()).slice(-2)}
+function vol(w){var v=0,i,j,e,s;for(i=0;i<w.ex.length;i++){e=w.ex[i];for(j=0;j<e.sets.length;j++){s=e.sets[j];if(s[2]&&s[3]!==1)v+=(s[0]||0)*(s[1]||0)}}return v}
+// last logged sets for an exercise name (for "previous" hints + prefill)
+function prev(name){
+  for(var i=db.workouts.length-1;i>=0;i--){
+    var ex=db.workouts[i].ex;
+    for(var j=0;j<ex.length;j++)if(ex[j].n===name)return ex[j].sets;
+  }
+  return null;
+}
+
+// ---------- screens ----------
+function show(id){
+  $("home").className=id==="home"?"":"hidden";
+  $("workout").className=id==="workout"?"":"hidden";
+  $("detail").className=id==="detail"?"":"hidden";
+  $("tedit").className=id==="tedit"?"":"hidden";
+  $("finishBtn").className=id==="workout"?"hbtn":"hbtn hidden";
+  $("title").textContent=id==="workout"?"Workout":id==="tedit"?"Edit Template":"Lift Log";
+}
+
+// ---------- home ----------
+function renderBW(){
+  var n=db.bw.length;
+  if(!n){$("bwLast").textContent="No entries yet";return}
+  var last=db.bw[n-1],txt=last[1]+" kg · "+fmtDate(last[0]);
+  if(n>1){
+    var d=Math.round((last[1]-db.bw[n-2][1])*10)/10;
+    txt+="  ("+(d>0?"+":"")+d+")";
+  }
+  $("bwLast").textContent=txt;
+  $("bwIn").placeholder=""+last[1];
+}
+$("bwBtn").addEventListener("click",function(){
+  var v=+$("bwIn").value;
+  if(!v){$("bwIn").focus();return}
+  var today=fmtYMD(Date.now()),n=db.bw.length;
+  if(n&&fmtYMD(db.bw[n-1][0])===today)db.bw[n-1]=[Date.now(),v]; // overwrite today's
+  else db.bw.push([Date.now(),v]);
+  $("bwIn").value="";$("bwIn").blur();
+  save();renderBW();
+});
+
+function renderHome(){
+  renderTemplates();renderBW();
+  var h=$("history"),html="",i,w;
+  if(!db.workouts.length)html='<div class="empty">No workouts yet.<br>Start one above.</div>';
+  for(i=db.workouts.length-1;i>=0;i--){
+    w=db.workouts[i];
+    html+='<div class="card" data-i="'+i+'"><div class="t">'+fmtDate(w.date)+'</div><div class="s">'+
+      w.ex.length+' exercises · '+fmtT(w.dur)+' · '+vol(w)+' kg volume</div></div>';
+  }
+  h.innerHTML=html;
+}
+$("history").addEventListener("click",function(e){
+  var c=e.target.closest(".card");
+  if(c)openDetail(+c.getAttribute("data-i"));
+});
+
+// ---------- templates ----------
+function renderTemplates(){
+  var html="",i,j,t,names;
+  for(i=0;i<db.templates.length;i++){
+    t=db.templates[i];names=[];
+    for(j=0;j<t.ex.length;j++)names.push(t.ex[j].n);
+    html+='<div class="card" data-i="'+i+'" style="display:flex;align-items:center">'+
+      '<div style="flex:1;overflow:hidden"><div class="t">'+t.name+'</div>'+
+      '<div class="s" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+(names.join(", ")||"empty")+'</div></div>'+
+      '<button class="hbtn" data-a="edit">Edit</button></div>';
+  }
+  $("templates").innerHTML=html;
+}
+$("templates").addEventListener("click",function(e){
+  var c=e.target.closest(".card");
+  if(!c)return;
+  var i=+c.getAttribute("data-i");
+  if(e.target.getAttribute("data-a")==="edit"){openEditor(i);return}
+  // start workout from template
+  var t=db.templates[i],ex=[],j,k;
+  for(j=0;j<t.ex.length;j++){
+    var sets=[];
+    for(k=0;k<t.ex[j].t.length;k++)sets.push([null,null,0,t.ex[j].t[k],null]);
+    ex.push({n:t.ex[j].n,sets:sets});
+  }
+  active={date:Date.now(),ex:ex};
+  persistActive();renderWorkout();show("workout");startDur();
+});
+$("newTplBtn").addEventListener("click",function(){
+  db.templates.push({name:"New Template",ex:[]});
+  save();openEditor(db.templates.length-1);
+});
+
+// template editor
+var tIdx=-1;
+function openEditor(i){
+  tIdx=i;
+  $("tName").value=db.templates[i].name;
+  renderEditor();show("tedit");
+}
+function renderEditor(){
+  var t=db.templates[tIdx],html="",i,j,wn;
+  for(i=0;i<t.ex.length;i++){
+    html+='<div class="card"><div class="exhead"><span class="exname">'+t.ex[i].n+'</span>'+
+      '<button class="hbtn" data-a="delex" data-e="'+i+'" style="color:#f55">✕</button></div>';
+    wn=0;
+    for(j=0;j<t.ex[i].t.length;j++){
+      var ty=t.ex[i].t[j];
+      html+='<div class="row"><button class="c1 '+TYPE_C[ty]+'" data-a="type" data-e="'+i+'" data-s="'+j+'">'+(ty?TYPE_L[ty]:++wn)+'</button>'+
+        '<span class="c2" style="text-align:left;padding-left:8px;color:#888">'+TYPE_N[ty]+'</span>'+
+        '<button class="c5" data-a="delset" data-e="'+i+'" data-s="'+j+'" style="color:#f55">✕</button></div>';
+    }
+    html+='<button class="addset" data-a="addset" data-e="'+i+'">+ Add Set</button></div>';
+  }
+  $("tBody").innerHTML=html;
+}
+$("tBody").addEventListener("click",function(e){
+  var b=e.target,a=b.getAttribute("data-a");
+  if(!a)return;
+  var t=db.templates[tIdx],ei=+b.getAttribute("data-e"),si=+b.getAttribute("data-s");
+  if(a==="type")t.ex[ei].t[si]=(t.ex[ei].t[si]+1)%3;
+  else if(a==="delset")t.ex[ei].t.splice(si,1);
+  else if(a==="addset")t.ex[ei].t.push(0);
+  else if(a==="delex"){if(!confirm("Remove "+t.ex[ei].n+"?"))return;t.ex.splice(ei,1)}
+  save();renderEditor();
+});
+$("tName").addEventListener("input",function(){
+  db.templates[tIdx].name=this.value;save();
+});
+$("tPick").addEventListener("change",function(){
+  var v=this.value;this.selectedIndex=0;
+  if(!v||v==="__c")return;
+  db.templates[tIdx].ex.push({n:v,t:[0,0,0]});
+  save();renderEditor();
+});
+$("tBackBtn").addEventListener("click",function(){show("home");renderHome()});
+$("tDelBtn").addEventListener("click",function(){
+  if(!confirm("Delete this template?"))return;
+  db.templates.splice(tIdx,1);save();show("home");renderHome();
+});
+
+// ---------- detail ----------
+var detailIdx=-1;
+function openDetail(i){
+  detailIdx=i;
+  var w=db.workouts[i],html="",j,k,e,s;
+  html='<h2>'+fmtDate(w.date)+' · '+fmtT(w.dur)+'</h2>';
+  for(j=0;j<w.ex.length;j++){
+    e=w.ex[j];
+    html+='<div class="card"><div class="t" style="color:#2f6fed">'+e.n+'</div>';
+    for(k=0;k<e.sets.length;k++){
+      s=e.sets[k];
+      var ty=s[3]||0;
+      html+='<div class="s"><span class="'+TYPE_C[ty]+'">'+(ty?TYPE_L[ty]:(k+1))+'</span>  '+(s[0]||0)+' kg × '+(s[1]||0)+(s[4]!=null?' @'+s[4]:'')+'</div>';
+    }
+    html+='</div>';
+  }
+  $("detailBody").innerHTML=html;
+  show("detail");
+}
+$("backBtn").addEventListener("click",function(){show("home");renderHome()});
+$("delBtn").addEventListener("click",function(){
+  if(confirm("Delete this workout?")){db.workouts.splice(detailIdx,1);save();show("home");renderHome()}
+});
+
+// ---------- workout ----------
+var durInt=null,timerInt=null,timerEnd=0;
+
+function startDur(){
+  stopDur();
+  durInt=setInterval(function(){
+    $("dur").textContent=fmtT(Math.floor((Date.now()-active.date)/1000));
+  },1000);
+}
+function stopDur(){if(durInt){clearInterval(durInt);durInt=null}}
+
+function fillPicker(){
+  var names=DEFAULT_EX.concat(db.custom),html='<option value="">+ Add Exercise…</option>',i;
+  names.sort();
+  for(i=0;i<names.length;i++)html+='<option>'+names[i]+'</option>';
+  $("tPick").innerHTML=html;
+  html+='<option value="__c">Custom…</option>';
+  $("exPick").innerHTML=html;
+}
+
+function renderWorkout(){
+  var html="",i,j,e,s,p;
+  for(i=0;i<active.ex.length;i++){
+    e=active.ex[i];p=prev(e.n);
+    html+='<div class="card"><div class="exhead"><span class="exname">'+e.n+'</span>'+
+      '<button class="hbtn" data-a="delex" data-e="'+i+'" style="color:#f55">✕</button></div>'+
+      '<div class="row hd"><span class="c1">Set</span><span class="c2">Prev</span><span class="c3">kg</span><span class="c4">Reps</span><span class="c6">RPE</span><span class="c5"></span></div>';
+    var wn=0;
+    for(j=0;j<e.sets.length;j++){
+      s=e.sets[j];
+      var ty=s[3]||0;
+      var pv=p&&p[j]?p[j][0]+"×"+p[j][1]:"—";
+      html+='<div class="row'+(s[2]?" done":"")+'">'+
+        '<button class="c1 '+TYPE_C[ty]+'" data-a="type" data-e="'+i+'" data-s="'+j+'">'+(ty?TYPE_L[ty]:++wn)+'</button><span class="c2">'+pv+'</span>'+
+        '<span class="c3"><input class="num" type="number" inputmode="decimal" step="0.5" value="'+(s[0]===null?"":s[0])+'" data-e="'+i+'" data-s="'+j+'" data-f="0" placeholder="'+(p&&p[j]?p[j][0]:"")+'"></span>'+
+        '<span class="c4"><input class="num" type="number" inputmode="numeric" value="'+(s[1]===null?"":s[1])+'" data-e="'+i+'" data-s="'+j+'" data-f="1" placeholder="'+(p&&p[j]?p[j][1]:"")+'"></span>'+
+        '<span class="c6"><input class="num" type="number" inputmode="decimal" step="0.5" min="5" max="10" value="'+(s[4]==null?"":s[4])+'" data-e="'+i+'" data-s="'+j+'" data-f="4"></span>'+
+        '<span class="c5"><button class="chk" data-a="chk" data-e="'+i+'" data-s="'+j+'">✓</button></span></div>';
+    }
+    html+='<button class="addset" data-a="addset" data-e="'+i+'">+ Add Set</button></div>';
+  }
+  $("exercises").innerHTML=html;
+}
+
+// one delegated listener for the whole workout (cheap on old hardware)
+$("exercises").addEventListener("click",function(e){
+  var t=e.target,a=t.getAttribute("data-a");
+  if(!a)return;
+  var ei=+t.getAttribute("data-e"),ex=active.ex[ei];
+  if(a==="addset"){
+    var last=ex.sets[ex.sets.length-1];
+    ex.sets.push([last?last[0]:null,last?last[1]:null,0,0,null]);
+  }else if(a==="type"){
+    var st=ex.sets[+t.getAttribute("data-s")];
+    st[3]=((st[3]||0)+1)%3;
+  }else if(a==="delex"){
+    if(!confirm("Remove "+ex.n+"?"))return;
+    active.ex.splice(ei,1);
+  }else if(a==="chk"){
+    var si=+t.getAttribute("data-s"),s=ex.sets[si];
+    s[2]=s[2]?0:1;
+    if(s[2]){
+      // adopt placeholder (previous) values if fields left blank
+      var p=prev(ex.n);
+      if(s[0]===null&&p&&p[si])s[0]=p[si][0];
+      if(s[1]===null&&p&&p[si])s[1]=p[si][1];
+      startTimer(90);
+    }
+  }
+  persistActive();renderWorkout();
+});
+$("exercises").addEventListener("input",function(e){
+  var t=e.target;
+  if(t.className.indexOf("num")<0)return;
+  var s=active.ex[+t.getAttribute("data-e")].sets[+t.getAttribute("data-s")];
+  s[+t.getAttribute("data-f")]=t.value===""?null:+t.value;
+  persistActive();
+});
+
+$("exPick").addEventListener("change",function(){
+  var v=this.value;
+  this.selectedIndex=0;
+  if(!v)return;
+  if(v==="__c"){$("exCustom").className="txt";$("exCustom").focus();return}
+  addExercise(v);
+});
+$("exCustom").addEventListener("change",function(){
+  var v=this.value.trim();
+  this.value="";this.className="txt hidden";
+  if(!v)return;
+  if(DEFAULT_EX.indexOf(v)<0&&db.custom.indexOf(v)<0){db.custom.push(v);fillPicker()}
+  addExercise(v);
+});
+function addExercise(n){
+  active.ex.push({n:n,sets:[[null,null,0,0,null]]});
+  persistActive();renderWorkout();
+}
+
+function persistActive(){db.active=active;save()}
+
+$("startBtn").addEventListener("click",function(){
+  active={date:Date.now(),ex:[]};
+  persistActive();
+  renderWorkout();show("workout");startDur();
+});
+$("cancelBtn").addEventListener("click",function(){
+  if(!confirm("Discard this workout?"))return;
+  endWorkout(false);
+});
+$("finishBtn").addEventListener("click",function(){
+  // keep only sets that were checked or have data
+  var i,j,e,kept=[];
+  for(i=0;i<active.ex.length;i++){
+    e=active.ex[i];
+    var sets=[];
+    for(j=0;j<e.sets.length;j++)if(e.sets[j][2])sets.push(e.sets[j]);
+    if(sets.length)kept.push({n:e.n,sets:sets});
+  }
+  if(!kept.length){alert("No completed sets. Tap ✓ on sets you did, or cancel.");return}
+  db.workouts.push({date:active.date,dur:Math.floor((Date.now()-active.date)/1000),ex:kept});
+  endWorkout(true);
+});
+function endWorkout(){
+  active=null;db.active=null;save();
+  stopDur();stopTimer();
+  show("home");renderHome();
+}
+
+// ---------- export ----------
+$("exportBtn").addEventListener("click",function(){
+  if(!db.workouts.length&&!db.bw.length){alert("Nothing to export yet.");return}
+  var lines=["date,exercise,set,type,kg,reps,rpe"],i,j,k,w,e,s;
+  for(i=0;i<db.bw.length;i++)
+    lines.push(fmtYMD(db.bw[i][0])+',"Bodyweight",,bodyweight,'+db.bw[i][1]+',,');
+  for(i=0;i<db.workouts.length;i++){
+    w=db.workouts[i];
+    var ds=fmtYMD(w.date);
+    for(j=0;j<w.ex.length;j++){
+      e=w.ex[j];
+      for(k=0;k<e.sets.length;k++){
+        s=e.sets[k];
+        lines.push(ds+',"'+e.n.replace(/"/g,'""')+'",'+(k+1)+","+(s[3]===1?"warmup":s[3]===2?"top":"normal")+","+(s[0]||0)+","+(s[1]||0)+","+(s[4]!=null?s[4]:""));
+      }
+    }
+  }
+  var txt=lines.join("\n");
+  if(navigator.share){
+    navigator.share({title:"Lift Log export",text:txt})["catch"](function(){showExport(txt)});
+  }else showExport(txt);
+});
+function showExport(txt){
+  var t=$("exportOut");
+  t.className="txt";t.value=txt;t.focus();t.select();
+}
+
+// ---------- rest timer ----------
+function startTimer(sec){
+  timerEnd=Date.now()+sec*1000;
+  $("timer").className="timer";
+  tick();
+  if(!timerInt)timerInt=setInterval(tick,1000);
+}
+function tick(){
+  var left=Math.round((timerEnd-Date.now())/1000);
+  if(left<=0){stopTimer();return}
+  $("timerVal").textContent=fmtT(left);
+}
+function stopTimer(){
+  if(timerInt){clearInterval(timerInt);timerInt=null}
+  $("timer").className="timer hidden";
+}
+$("timerStop").addEventListener("click",stopTimer);
+
+// pause timers when app is backgrounded — saves battery, recomputed on return
+document.addEventListener("visibilitychange",function(){
+  if(document.hidden){stopDur();if(timerInt){clearInterval(timerInt);timerInt=null}}
+  else if(active){startDur();if(timerEnd>Date.now()){$("timer").className="timer";timerInt=setInterval(tick,1000);tick()}}
+});
+
+// ---------- init ----------
+// offline cache — Safari only allows this over HTTPS, so it activates once properly hosted
+if("serviceWorker" in navigator&&(location.protocol==="https:"||location.hostname==="localhost"))
+  navigator.serviceWorker.register("sw.js");
+fillPicker();
+if(active){renderWorkout();show("workout");startDur()}
+else{renderHome();show("home")}
+})();
+</script>
+</body>
+</html>
