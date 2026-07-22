@@ -97,7 +97,7 @@ select,input.txt{width:calc(100% - 24px);margin:6px 12px;padding:10px;background
 <script>
 (function(){
 "use strict";
-var LS="liftlog", DEFAULT_EX=["Squat","Bench Press","Deadlift","Overhead Press","Barbell Row","Pull Up","Dip","Lat Pulldown","Bicep Curl","Tricep Extension","Leg Press","Romanian Deadlift","Incline Bench","Lateral Raise","Lunge","Calf Raise","Face Pull","Crunch","Hanging Leg Raise","Russian Twist","Plank","Skullcrusher","Rope Pushdown","Single Arm Row","Kroc Row","Bar Tuck","Back Tuck","Hammer Curl","Archer Fly","Bulgarian Split Squat","Hack Squat","Leg Curl","Hip Thrust","Front Lever Practice","Dragon Flag","Weighted Leg Raise","Decline Crunch","Reverse Deadlift","Dumbbell Shoulder Press","Machine Shoulder Press","EZ Behind Head Press","Strict Lateral Raise","DB Prone Trap Raise","Flat Shoulder Press","Machine Knee Extension","Banded Reverse Nordic","Smith Calf Raise","Close Grip Bench Press","Strict Curl","Preacher Hammer Curl","Bicep Opener","Partial DB Triceps Kickback","Rope Triceps Extension","EZ Bar French Press","Hanging Knee Raise","Back Extension Ab Crunch","Back Extension Side Crunch","Decline Oblique Twist","Ab Roller","Compression Leg Raise","Hip Thruster","Nordic Hamstring Curl","Prone Hamstring Curl","KB Sumo Pulse Deadlift","Banded Adduction","Banded Abduction","KB Jefferson Curl","Explosive Bench Press","Incline Dumbbell Press","Cable Chest Press","Cable Flies","Pec Trap Complex","Wide Grip Pull Up","Scapular Pull Up","Single Arm T-Bar Row","DB Seal Row","Handle Lat Pulldown","Rotating Cable Cross Over Reverse Fly","DB Lat Pull Over"];
+var LS="liftlog", DEFAULT_EX=["Squat","Bench Press","Deadlift","Overhead Press","Barbell Row","Pull Up","Dip","Lat Pulldown","Bicep Curl","Tricep Extension","Leg Press","Romanian Deadlift","Incline Bench","Lateral Raise","Lunge","Calf Raise","Face Pull","Crunch","Hanging Leg Raise","Russian Twist","Plank","Skullcrusher","Rope Pushdown","Single Arm Row","Kroc Row","Bar Tuck","Back Tuck","Hammer Curl","Archer Fly","Bulgarian Split Squat","Hack Squat","Leg Curl","Hip Thrust","Front Lever Practice","Dragon Flag","Weighted Leg Raise","Decline Crunch","Reverse Deadlift"];
 // set = [lb, reps, done, type, rpe]  type: 0 normal, 1 warm-up, 2 top set
 var TYPE_L=["","W","T"], TYPE_C=["","tw","tt"], TYPE_N=["Working set","Warm-up","Top set"];
 var $=function(id){return document.getElementById(id)};
@@ -110,26 +110,25 @@ db.custom=db.custom||[];          // custom exercise names
 db.bw=db.bw||[];                  // bodyweight: [[ts, lb], ...] one per day
 var active=db.active||null;       // survives reload/app kill
 
-// seed templates — 7-day split; t = per-set types (0=working, 1=warm-up, 2=top-set)
+// seed templates from Routine.md (PPL/Abs/Upper/Lower); t = per-set types
 // tplV bump replaces same-name templates on existing installs, keeps custom ones
 function T(n,t){return{n:n,t:t}}
 var SEED=[
-  {name:"Day 1 — Shoulders",ex:[T("Dumbbell Shoulder Press",[1,1,2,0,0]),T("Machine Shoulder Press",[0,0,0]),T("EZ Behind Head Press",[0,0,0]),T("Strict Lateral Raise",[1,1,0,0,0]),T("DB Prone Trap Raise",[0,0,0]),T("Flat Shoulder Press",[0,0])]},
-  {name:"Day 2 — Squats & Quads",ex:[T("Squat",[1,1,2,0,0]),T("Leg Press",[1,0,0,0]),T("Bulgarian Split Squat",[0,0,0]),T("Machine Knee Extension",[0,0,0]),T("Banded Reverse Nordic",[0,0]),T("Smith Calf Raise",[0,0])]},
-  {name:"Day 3 — Biceps & Triceps",ex:[T("Close Grip Bench Press",[1,1,2,0,0]),T("Strict Curl",[1,0,0,0]),T("Preacher Hammer Curl",[0,0,0]),T("Bicep Opener",[0,0]),T("Partial DB Triceps Kickback",[0,0,0]),T("Rope Triceps Extension",[0,0,0]),T("EZ Bar French Press",[0,0])]},
-  {name:"Day 4 — Abs & Core",ex:[T("Hanging Knee Raise",[0,0,0,0,0]),T("Back Extension Ab Crunch",[0,0,0]),T("Back Extension Side Crunch",[0,0]),T("Decline Oblique Twist",[0,0,0]),T("Ab Roller",[0,0,0]),T("Compression Leg Raise",[0,0,0])]},
-  {name:"Day 5 — Deadlifts & Glutes",ex:[T("Deadlift",[1,1,2,0,0]),T("Hip Thruster",[1,0,0,0]),T("Nordic Hamstring Curl",[1,0,0,0]),T("Prone Hamstring Curl",[0,0,0]),T("KB Sumo Pulse Deadlift",[0,0]),T("Banded Adduction",[0,0]),T("Banded Abduction",[0,0]),T("KB Jefferson Curl",[0,0])]},
-  {name:"Day 6 — Bench & Chest",ex:[T("Bench Press",[1,1,2,0,0]),T("Explosive Bench Press",[0,0,0]),T("Dips",[1,0,0,0]),T("Incline Dumbbell Press",[0,0,0]),T("Cable Chest Press",[0,0,0]),T("Cable Flies",[0,0]),T("Pec Trap Complex",[0,0])]},
-  {name:"Day 7 — Upper Back",ex:[T("Wide Grip Pull Up",[1,1,2,0,0,0]),T("Scapular Pull Up",[0,0]),T("Single Arm T-Bar Row",[1,1,0,0,0]),T("DB Seal Row",[0,0,0]),T("Handle Lat Pulldown",[0,0]),T("Rotating Cable Cross Over Reverse Fly",[0,0]),T("DB Lat Pull Over",[0,0])]}
+  {name:"Push",ex:[T("Bench Press",[1,1,2,0,0]),T("Dip",[0,0,0]),T("Incline Bench",[0,0,0]),T("Overhead Press",[0,0,0]),T("Skullcrusher",[0,0]),T("Rope Pushdown",[0,0]),T("Lateral Raise",[0,0,0])]},
+  {name:"Pull",ex:[T("Pull Up",[1,1,2,0,0,0]),T("Single Arm Row",[0,0,0]),T("Kroc Row",[0,0]),T("Bar Tuck",[0,0,0]),T("Bicep Curl",[0,0]),T("Hammer Curl",[0,0]),T("Archer Fly",[0,0])]},
+  {name:"Legs",ex:[T("Squat",[1,1,2,0,0]),T("Romanian Deadlift",[1,0,0,0]),T("Bulgarian Split Squat",[0,0]),T("Hack Squat",[0,0]),T("Leg Curl",[0,0]),T("Calf Raise",[0,0,0])]},
+  {name:"Abs",ex:[T("Front Lever Practice",[0,0,0,0,0]),T("Dragon Flag",[0,0,0]),T("Weighted Leg Raise",[0,0,0]),T("Decline Crunch",[0,0]),T("Reverse Deadlift",[0,0])]},
+  {name:"Upper",ex:[T("Dip",[1,1,2,0,0,0]),T("Pull Up",[1,0,0,0]),T("Bench Press",[1,0,0,0]),T("Single Arm Row",[0,0,0]),T("Overhead Press",[0,0]),T("Archer Fly",[0,0]),T("Back Tuck",[0,0,0])]},
+  {name:"Lower",ex:[T("Hack Squat",[1,1,2,0,0]),T("Romanian Deadlift",[1,0,0,0]),T("Hip Thrust",[1,0,0,0]),T("Bulgarian Split Squat",[0,0]),T("Leg Curl",[0,0]),T("Calf Raise",[0,0,0])]}
 ];
-if((db.tplV||0)<3){
+if((db.tplV||0)<4){
   db.templates=db.templates||[];
   for(var si=0;si<SEED.length;si++){
     var sf=-1;
     for(var sj=0;sj<db.templates.length;sj++)if(db.templates[sj].name===SEED[si].name){sf=sj;break}
     if(sf<0)db.templates.push(SEED[si]);else db.templates[sf]=SEED[si];
   }
-  db.tplV=3;save();
+  db.tplV=4;save();
 }
 
 // ---------- helpers ----------
